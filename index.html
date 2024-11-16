@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic Binary Search Visualization</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        .glow {
+            box-shadow: 0 0 10px #4f46e5, 0 0 20px #4f46e5, 0 0 30px #4f46e5, 0 0 40px #4f46e5;
+        }
+        .node {
+            transition: all 0.5s ease;
+        }
+        .custom-bg {
+            background-color: #1a1a2e;
+        }
+        #footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(26, 26, 46, 0.8);
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="custom-bg text-white min-h-screen flex flex-col items-center justify-center overflow-hidden p-4">
+    <div class="text-center mb-8 z-10">
+        <h1 class="text-6xl font-bold mb-4 text-indigo-400 pulse">Epic Binary Search</h1>
+        <p class="text-2xl mb-4">Target: <span id="target" class="font-bold text-yellow-300"></span></p>
+        <button id="startBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full transition duration-300 transform hover:scale-110 mb-4">
+            Initiate Search
+        </button>
+    </div>
+
+    <div id="inputContainer" class="mb-8 w-full max-w-3xl">
+        <label for="arraySize" class="block text-sm font-medium text-indigo-300 mb-2">Array Size (1-20):</label>
+        <input type="number" id="arraySize" min="1" max="20" value="10" class="w-full p-2 bg-indigo-900 text-white rounded-md mb-4">
+        <div id="arrayInputs" class="grid grid-cols-10 gap-2"></div>
+        <button id="generateBtn" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+            Generate Array
+        </button>
+    </div>
+
+    <div id="arrayContainer" class="flex justify-center items-center mb-8 relative w-full h-64 overflow-hidden"></div>
+    <div id="status" class="text-2xl text-center mb-4 text-indigo-300"></div>
+    <div id="complexity" class="text-xl text-center opacity-0 text-indigo-400">Time Complexity: O(log n)</div>
+
+    <div id="footer" class="text-indigo-300">
+        &copy; 2024 Taha Daneshmand | <a href="https://github.com/Taha-Daneshmand" target="_blank" class="text-indigo-400 hover:text-indigo-200">GitHub</a>
+    </div>
+
+    <script>
+        let array = [];
+        let target;
+        let left = 0;
+        let right;
+        let mid;
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function createInputs() {
+            const size = parseInt(document.getElementById('arraySize').value);
+            const container = document.getElementById('arrayInputs');
+            container.innerHTML = '';
+            for (let i = 0; i < size; i++) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'w-full p-2 bg-indigo-800 text-white rounded-md';
+                input.placeholder = `Number ${i + 1}`;
+                container.appendChild(input);
+            }
+        }
+
+        function generateArray() {
+            const inputs = document.querySelectorAll('#arrayInputs input');
+            array = Array.from(inputs).map(input => parseInt(input.value)).filter(num => !isNaN(num));
+            array.sort((a, b) => a - b);
+            createArray();
+            
+            document.getElementById('inputContainer').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'inline-block';
+        }
+
+        function createArray() {
+            const container = document.getElementById('arrayContainer');
+            container.innerHTML = '';
+            const width = container.offsetWidth;
+
+            array.forEach((num, index) => {
+                const element = document.createElement('div');
+                element.textContent = num;
+                element.className = 'node w-16 h-16 rounded-full border-4 border-indigo-500 flex items-center justify-center text-2xl font-bold transition-all duration-500 cursor-pointer bg-indigo-900 hover:bg-indigo-800';
+                element.id = `element-${index}`;
+                element.style.position = 'absolute';
+                const spacing = 100;
+                const x = (index * spacing) + (width / 2 - (array.length * spacing) / 2);
+                element.style.left = `${x}px`;
+                element.style.top = `50%`;
+                element.style.transform = 'translateY(-50%)';
+                container.appendChild(element);
+
+                element.addEventListener('click', () => {
+                    target = num;
+                    document.getElementById('target').textContent = target;
+                    binarySearch();
+                });
+            });
+        }
+
+        async function binarySearch() {
+            const statusDiv = document.getElementById('status');
+            const complexityDiv = document.getElementById('complexity');
+            left = 0;
+            right = array.length - 1;
+            let steps = 0;
+
+            gsap.to(complexityDiv, { opacity: 1, duration: 1 });
+
+            while (left <= right) {
+                mid = Math.floor((left + right) / 2);
+                steps++;
+
+                document.querySelectorAll('.border-yellow-400, .border-green-400, .border-red-400').forEach(el => {
+                    el.classList.remove('border-yellow-400', 'border-green-400', 'border-red-400', 'glow');
+                    el.classList.add('border-indigo-500');
+                });
+
+                const midElement = document.getElementById(`element-${mid}`);
+                const leftElement = document.getElementById(`element-${left}`);
+                const rightElement = document.getElementById(`element-${right}`);
+
+                midElement.classList.remove('border-indigo-500');
+                leftElement.classList.remove('border-indigo-500');
+                rightElement.classList.remove('border-indigo-500');
+
+                midElement.classList.add('border-yellow-400', 'glow');
+                leftElement.classList.add('border-green-400', 'glow');
+                rightElement.classList.add('border-red-400', 'glow');
+
+                statusDiv.textContent = `Examining element ${array[mid]}`;
+                await sleep(1000);
+
+                if (array[mid] === target) {
+                    statusDiv.textContent = `Found ${target} at position ${mid}!`;
+                    gsap.to(midElement, { scale: 1.5, duration: 0.5 });
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                    break;
+                } else if (array[mid] < target) {
+                    statusDiv.textContent = `${target} is greater. Searching right half.`;
+                    left = mid + 1;
+                } else {
+                    statusDiv.textContent = `${target} is smaller. Searching left half.`;
+                    right = mid - 1;
+                }
+
+                await animateDivision(left, right);
+                await sleep(500);
+            }
+
+            if (left > right) {
+                statusDiv.textContent = `${target} not found in the array.`;
+            }
+
+            complexityDiv.textContent = `Time Complexity: O(log n) - Found in ${steps} steps`;
+        }
+
+        async function animateDivision(newLeft, newRight) {
+            const elements = document.querySelectorAll('.node');
+            const timeline = gsap.timeline();
+
+            elements.forEach((el, index) => {
+                if (index < newLeft || index > newRight) {
+                    timeline.to(el, {
+                        opacity: 0.3,
+                        scale: 0.8,
+                        duration: 0.5
+                    }, 0);
+                } else {
+                    timeline.to(el, {
+                        opacity: 1,
+                        scale: 1,
+                        duration: 0.5
+                    }, 0);
+                }
+            });
+
+            await sleep(500);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createInputs();
+            document.getElementById('arraySize').addEventListener('change', createInputs);
+            document.getElementById('generateBtn').addEventListener('click', generateArray);
+            document.getElementById('startBtn').addEventListener('click', () => {
+                if (array.length === 0) {
+                    alert('Please generate an array first!');
+                    return;
+                }
+                target = array[Math.floor(Math.random() * array.length)];
+                document.getElementById('target').textContent = target;
+                binarySearch();
+            });
+            window.addEventListener('resize', createArray);
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</body>
+</html>
